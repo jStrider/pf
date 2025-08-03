@@ -1,194 +1,198 @@
 # pf - CLI Password Manager
 
-> 🔐 Un gestionnaire de mots de passe en ligne de commande sécurisé utilisant age
+> 🔐 A secure command-line password manager using age encryption
 
-## 🚀 Installation rapide
+## 🚀 Quick Installation
 
 ```bash
-# Prérequis : Go 1.21+
+# Prerequisites: Go 1.21+
 git clone https://github.com/julienrenaudperso/pf
 cd pf
 make build
-make install  # Installation globale (nécessite sudo)
+make install  # Global installation
 ```
 
-## 📋 Commandes principales
+## 📋 Main Commands
 
-### Gestion des mots de passe
+### Password Management
 
-| Commande | Description | Exemple |
-|----------|-------------|---------|
-| `init [path]` | Initialise un nouveau store | `pf init ~/.passwords` |
-| `get <path>` | Récupère un mot de passe | `pf get email/gmail --clip` |
-| `put <path>` | Stocke/met à jour un mot de passe | `pf put email/gmail --editor` |
-| `delete <path>` | Supprime un mot de passe | `pf delete email/gmail` |
-| `history <path>` | Affiche l'historique des versions | `pf history email/gmail` |
-| `rollback <path> <n>` | Restaure la version n | `pf rollback email/gmail 2` |
+| Command | Description | Example |
+|---------|-------------|---------|
+| `init` | Initialize a new store | `pf init` |
+| `get <key>` | Retrieve a password | `pf get email/gmail --clip` |
+| `put <key>` | Store/update a password | `pf put email/gmail` |
+| `delete <key>` | Delete a password | `pf delete email/gmail` |
+| `list` | List all passwords | `pf list --tree` |
+| `history <key>` | Show version history | `pf history email/gmail` |
+| `rollback <key> <n>` | Restore version n | `pf rollback email/gmail 2` |
 
-### Gestion des stores
+### Store Management
 
-| Commande | Description |
-|----------|-------------|
-| `store show` | Affiche le store par défaut |
-| `store list` | Liste tous les stores configurés |
-| `store setup <name> <path>` | Crée un nouveau store |
-| `store ls [store]` | Liste les mots de passe d'un store |
+| Command | Description |
+|---------|-------------|
+| `store list` | List all configured stores |
+| `store add <name>` | Create a new store |
+| `store remove <name>` | Remove a store |
+| `store set-default <name>` | Set default store |
 
-### Configuration et age
+### Configuration and age
 
-| Commande | Description |
-|----------|-------------|
-| `config show` | Affiche la configuration |
-| `config edit` | Édite la configuration |
-| `config verify` | Vérifie la configuration |
-| `age generate` | Génère une nouvelle paire de clés age |
-| `age list-keys` | Liste les destinataires age |
-| `age add-key <recipient>` | Ajoute un destinataire age |
-| `age import <file>` | Importe une identité age |
+| Command | Description |
+|---------|-------------|
+| `config show` | Display configuration |
+| `config get <key>` | Get a configuration value |
+| `config set <key> <value>` | Set a configuration value |
+| `age generate` | Generate a new age key pair |
+| `age export` | Export public key (recipient) |
+| `age import <file>` | Import age private key |
 
 ## 🔧 Configuration
 
-**Fichier**: `~/.config/pf/config.yaml`
+**File**: `~/.pf/config.yaml`
 
 ```yaml
-global:
-    default_store: mystore_1         # Store par défaut
-    editor: nano                     # Éditeur de texte
-    clipboard_timeout: 30s           # Durée avant effacement du presse-papier
-    default_get_mode: clip           # Mode par défaut: "clip" ou "show"
-
+default_store: personal              # Default store
 stores:
-    mystore_1:
-        path: /home/user/.pf-store   # Chemin du store
-        editor: nano                 # Éditeur spécifique (optionnel)
-        audit: /home/user/.pf-store/logs
-
-audit:
-    enabled: true                    # Active l'audit
-    log_failed_attempts: true        # Journalise les échecs
-    alert_on_suspicious_activity: true
-    retention_days: 365              # Durée de conservation des logs
+  personal:
+    path: ~/.pf/stores/personal     # Store path
+    recipients:                     # age recipients
+      - age1abc...xyz
+age_key_path: ~/.pf/age-key.txt    # Private key path
+clipboard_timeout: 45s              # Clipboard clearing timeout
+audit_log: true                     # Enable audit logging
 ```
 
-## 📁 Structure d'un store
+## 📁 Store Structure
 
 ```
-~/.pf-store/
-├── .recipients         # Clés publiques age (1 par ligne)
-├── data/              # Mots de passe chiffrés
-│   └── email/
-│       └── gmail.yaml
-├── metadata/          # Métadonnées des versions
-│   └── email/
-│       └── gmail.yaml
-└── logs/              # Journaux d'audit
-    └── 2025-08-03.log
+~/.pf/stores/personal/
+├── .recipients         # age public keys (one per line)
+├── .audit.log         # Audit log (if enabled)
+├── email/
+│   └── gmail.yaml     # Encrypted password file
+├── banking/
+│   └── mybank.yaml
+└── work/
+    ├── gitlab.yaml
+    └── vpn.yaml
 ```
 
-### Format des fichiers
+### File Format
 
-**data/email/gmail.yaml** (chiffré age)
+**Password file (e.g., email/gmail.yaml)**
 ```yaml
-name: gmail
+key: email/gmail
 versions:
   - version: 1
-    encrypted_value: |
+    password: |
       -----BEGIN AGE ENCRYPTED FILE-----
-      [contenu chiffré]
+      [encrypted content]
       -----END AGE ENCRYPTED FILE-----
-```
-
-**metadata/email/gmail.yaml**
-```yaml
-name: gmail
-versions:
-  - version: 1
-    created_at: 2025-08-03T12:00:00Z
+    timestamp: 1722686400
     author: julien
+    message: "Initial password"
 ```
 
-**Format des logs**
+**Audit log format**
 ```
-<timestamp>  <action>  <actor>  <path>  <version>
-2025-08-03T12:00:00Z  put  julien  email/gmail  1
+2025-08-03T12:00:00Z | julien | ACCESS | email/gmail | 
+2025-08-03T12:01:00Z | julien | MODIFY | email/gmail | Updated password
 ```
 
-## 🔒 Sécurité
+## 🔒 Security
 
-- **Chiffrement**: age (moderne et simple) avec clés publiques dans `.recipients`
-- **Clé privée**: Stockée dans `~/.config/age/key.txt` (protégée 0600)
+- **Encryption**: age (modern and simple) with public keys in `.recipients`
+- **Private key**: Stored securely with 0600 permissions
 - **Permissions**: 
-  - Store: `0700` (lecture/écriture/exécution propriétaire)
-  - Fichiers: `0600` (lecture/écriture propriétaire)
-- **Presse-papier**: Effacement automatique après timeout
-- **Audit**: Journalisation complète des actions
+  - Stores: `0700` (owner read/write/execute)
+  - Files: `0600` (owner read/write)
+- **Clipboard**: Automatic clearing after timeout
+- **Audit**: Complete action logging
 
-## 💡 Exemples d'utilisation
+## 💡 Usage Examples
 
-### Démarrage rapide
+### Quick Start
 ```bash
-# Générer une clé age (si vous n'en avez pas)
-pf age generate
-
-# Initialiser un store
+# Initialize a store (generates age key if needed)
 pf init
-# Le système propose de générer une clé si aucune n'est fournie
 
-# Ajouter un mot de passe
+# Add a password
 pf put email/gmail
-# Saisir le mot de passe (masqué)
+# Enter password (hidden input)
 
-# Récupérer dans le presse-papier
+# Retrieve to clipboard
 pf get email/gmail
 
-# Voir l'historique
+# View history
 pf history email/gmail
 ```
 
-### Organisation hiérarchique
+### Hierarchical Organization
 ```bash
 pf put personal/email/gmail
 pf put personal/social/twitter
 pf put work/vpn
 pf put work/gitlab
 pf put banking/mybank
+
+# List with tree view
+pf list --tree
 ```
 
-### Multi-stores
+### Multi-store Usage
 ```bash
-# Créer un store "work"
-pf store setup work ~/work-passwords
+# Create a "work" store
+pf store add work
 
-# Utiliser un store spécifique
+# Use a specific store
 pf get gitlab --store work
+
+# Set default store
+pf store set-default work
 ```
 
-### Options avancées
+### Advanced Options
 ```bash
-# Mode éditeur pour mots de passe complexes
-pf put ssh/server --editor
+# Multiline passwords
+pf put ssh/server --multiline
 
-# Afficher sur stdout au lieu du presse-papier
-pf get ssh/server --show
+# Display on stdout instead of clipboard
+pf get ssh/server
 
-# Récupérer une version spécifique
+# Retrieve with clipboard timeout
+pf get email/gmail --clip-time 60s
+
+# Get specific version
 pf get email/gmail --version 2
 
-# Supprimer sans confirmation
+# Delete without confirmation
 pf delete old/account --force
 ```
 
-## 🛠️ Développement
+### Shell Completion
+
+The password manager supports intelligent shell completion:
 
 ```bash
-make build         # Compiler
-make test          # Tests unitaires
-make fmt           # Formater le code
-make lint          # Vérifier le code
-make clean         # Nettoyer
+# Install completions (done by make install)
+pf completion zsh > ~/.zsh/completions/_pf
+
+# Tab completion examples
+pf get <TAB>              # Shows all keys
+pf get aws/<TAB>          # Shows: dev/ prod/
+pf get aws/prod/<TAB>     # Shows passwords in aws/prod/
 ```
 
+## 🛠️ Development
 
-## 📄 Licence
+```bash
+make build         # Build the binary
+make test          # Run unit tests
+make lint          # Lint the code
+make install       # Install with completions
+make clean         # Clean build artifacts
+```
 
-MIT License - Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) file for details.
